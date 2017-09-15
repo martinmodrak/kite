@@ -33,25 +33,33 @@ updatePhysics timeStep model =
         forcesKite =
             forcesOnKite model
 
+        --symplectic Euler - update velocity before updating position
         modelWithForces =
             { model
-                | kitePos = Vec2.add model.kitePos (Vec2.scale timeStep model.kiteVelocity)
-                , kiteVelocity = Vec2.add model.kiteVelocity (Vec2.scale timeStep forcesKite)
+                | kiteVelocity = Vec2.add model.kiteVelocity (Vec2.scale timeStep forcesKite)
             }
 
         modelWithImpulse =
             { modelWithForces
                 | kiteVelocity =
-                    Vec2.add modelWithForces.kiteVelocity
-                        (Vec2.scale timeStep (impulseOnKite modelWithForces))
+                        impulseOnKite modelWithForces
             }
     in
-        modelWithImpulse
+        { modelWithImpulse
+            | kitePos = Vec2.add modelWithImpulse.kitePos (Vec2.scale timeStep modelWithImpulse.kiteVelocity)
+        }
 
 
 forcesOnKite : Model -> Float2
 forcesOnKite model =
-     GameConstants.gravity
+    let 
+        kiteY =
+            (Vec2.getY model.kitePos)
+    in
+        if kiteY > 0.001 then
+            GameConstants.gravity
+        else
+            (0, 0)
 
 
 impulseOnKite : Model -> Float2
@@ -59,8 +67,10 @@ impulseOnKite model =
     let
         kiteY =
             (Vec2.getY model.kitePos)
+        (kiteVelocityX, kiteVelocityY) =
+             model.kiteVelocity
     in
-        if kiteY < 0 then
-            ( 0, -10*kiteY )
+        if  (kiteY < -0.001) && (kiteVelocityY < 0) then
+            ( kiteVelocityX, -0.3 * kiteVelocityY)
         else
-            ( 0, 0 )
+            model.kiteVelocity
