@@ -7,7 +7,6 @@ import GameConstants
 import Vector2 as Vec2 exposing (Float2)
 
 
-
 update : Msg.Msg -> Model -> ( Model, Cmd Msg.Msg )
 update msg model =
     case msg of
@@ -30,17 +29,38 @@ updatePhysicsWrapper timeAccumulator model =
 
 updatePhysics : Float -> Model -> Model
 updatePhysics timeStep model =
-    let 
-        forcesKite = forcesOnKite model
-    in
-        {model | 
-            kitePos = Vec2.add model.kitePos model.kiteVelocity,
-            kiteVelocity = Vec2.add model.kiteVelocity forcesKite
-        }
+    let
+        forcesKite =
+            forcesOnKite model
 
-forcesOnKite: Model -> Float2
+        modelWithForces =
+            { model
+                | kitePos = Vec2.add model.kitePos (Vec2.scale timeStep model.kiteVelocity)
+                , kiteVelocity = Vec2.add model.kiteVelocity (Vec2.scale timeStep forcesKite)
+            }
+
+        modelWithImpulse =
+            { modelWithForces
+                | kiteVelocity =
+                    Vec2.add modelWithForces.kiteVelocity
+                        (Vec2.scale timeStep (impulseOnKite modelWithForces))
+            }
+    in
+        modelWithImpulse
+
+
+forcesOnKite : Model -> Float2
 forcesOnKite model =
-    if (Vec2.getY model.kitePos) < 800 then 
-        (0, GameConstants.gravity)
-    else
-        (0,-GameConstants.gravity)
+     GameConstants.gravity
+
+
+impulseOnKite : Model -> Float2
+impulseOnKite model =
+    let
+        kiteY =
+            (Vec2.getY model.kitePos)
+    in
+        if kiteY < 0 then
+            ( 0, -10*kiteY )
+        else
+            ( 0, 0 )

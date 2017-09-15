@@ -5,10 +5,10 @@ import Msg
 
 init : (Model, Cmd Msg.Msg)
 init =
-    { anchorPos = ( 600, 400)
-    , kitePos = ( 400, 600 )
+    { anchorPos = ( 0, 0)
+    , kitePos = ( 2, 2 )
     , kiteVelocity = (0,0)
     , windSpeed = 10
-    , tetherLength = 100
+    , tetherLength = sqrt 8
     , timeAccumulator = 0
     } ! []
