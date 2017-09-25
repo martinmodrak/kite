@@ -8,7 +8,7 @@ init =
     { anchorPos = ( 0, 0)
     , kitePos = ( 2, 2 )
     , kiteVelocity = (0,0)
-    , windSpeed = 10
+    , windSpeed = 1
     , tetherLength = sqrt 8
     , timeAccumulator = 0
     } ! []

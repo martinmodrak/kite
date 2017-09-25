@@ -55,12 +55,24 @@ forcesOnKite model =
     let 
         kiteY =
             (Vec2.getY model.kitePos)
+        gravityForce = 
+            if kiteY > 0.001 then
+                GameConstants.gravity
+            else
+                (0, 0)
+        airVelocity = 
+            Vec2.scale model.windSpeed GameConstants.windDirection
+        kiteAirVelocity =
+            Vec2.sub airVelocity model.kiteVelocity
+        kiteAirSpeed = 
+            Vec2.length kiteAirVelocity
+        dragForce =
+            Vec2.scale 
+                (0.5 * kiteAirSpeed ^ 2 * (coefficientOfDrag model))   --TODO: cross sectional area (but maybe included in coefficient of drag)
+                (Vec2.normalize kiteAirVelocity)
     in
-        if kiteY > 0.001 then
-            GameConstants.gravity
-        else
-            (0, 0)
-
+        gravityForce |>
+          Vec2.add dragForce
 
 impulseOnKite : Model -> Float2
 impulseOnKite model =
@@ -74,3 +86,11 @@ impulseOnKite model =
             ( kiteVelocityX, -0.3 * kiteVelocityY)
         else
             model.kiteVelocity
+
+coefficientOfDrag : Model -> Float
+coefficientOfDrag model =
+    1
+
+coefficientOfLift : Model -> Float
+coefficientOfLift model =
+    1

@@ -12,6 +12,9 @@ kiteWeight = 1
 gravity: Float2
 gravity = (0, -10)
 
+windDirection: Float2
+windDirection = (1, 0)
+
 viewMatrix: Matrix3.Float3x3
 viewMatrix = ((100,  0   , 400),
               (0   , -100, 600),
