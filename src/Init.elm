@@ -11,4 +11,5 @@ init =
     , windSpeed = 1
     , tetherLength = sqrt 8
     , timeAccumulator = 0
+    , debugArrows = []
     } ! []

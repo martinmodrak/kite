@@ -3,10 +3,13 @@ module GameConstants exposing(..)
 import Matrix3 
 import Vector2 exposing (Float2)
 
+physicsUpdateTime: Float
 physicsUpdateTime = 0.04
 
+maxTimeAccumulator: Float
 maxTimeAccumulator = 1
 
+kiteWeight: Float
 kiteWeight = 1
 
 gravity: Float2
