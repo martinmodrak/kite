@@ -7,7 +7,7 @@ physicsUpdateTime: Float
 physicsUpdateTime = 0.04
 
 physicsTimeWarp : Float
-physicsTimeWarp = 0.1
+physicsTimeWarp = 0.3
 
 maxTimeAccumulator: Float
 maxTimeAccumulator = 1
@@ -19,7 +19,11 @@ playerWeight: Float
 playerWeight = 2
 
 tetherForceTransferTolerance: Float
-tetherForceTransferTolerance = 0.1
+tetherForceTransferTolerance = 0.2
+
+velocityCorrectionDamping: Float
+velocityCorrectionDamping =
+    1
 
 waterLevelY: Float
 waterLevelY = 0

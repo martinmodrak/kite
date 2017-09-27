@@ -31,6 +31,7 @@ view model =
          )
             :: (div [ Attr.class "player", Attr.style (float2ToStyle model.playerPos) ] [])
             :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle (model.windIndicatorX, 3))] [])
+            :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle (60, 3))] []) --spacer
             :: (List.concatMap viewDebugArrow model.debugArrows)
         )
 

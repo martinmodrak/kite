@@ -62,7 +62,7 @@ updatePhysics timeStep model =
             Vec2.add modelWithImpulse.playerPos (Vec2.scale timeStep modelWithImpulse.playerVelocity)
 
         ( correctKitePos, correctKiteVelocity ) =
-            correctKiteForTether modelWithImpulse kitePosWithImpulse modelWithImpulse.kiteVelocity
+            correctKiteForTether modelWithImpulse timeStep kitePosWithImpulse modelWithImpulse.kiteVelocity
                 |> correctForWater
 
         ( correctPlayerPos, correctPlayerVelocity ) =
@@ -83,7 +83,11 @@ updatePhysics timeStep model =
                     model.windIndicatorX + model.windSpeed * timeStep
             , debugArrows =
                 [ DebugArrow "velocity" "green" model.kitePos modelWithImpulse.kiteVelocity
-                , DebugArrow "transfer" "pink" model.kitePos (Vec2.scale 0.1 forceTransfer)
+                , DebugArrow "playerVelocity" "green" model.playerPos modelWithImpulse.playerVelocity
+                , DebugArrow "relativeVelocity" "gold" model.kitePos (Vec2.sub modelWithImpulse.kiteVelocity modelWithImpulse.playerVelocity)
+                , debugArrowForce "transfer" "pink" model.kitePos forceTransfer
+                , debugArrowForce "kiteBeforeTransfer" "cyan" model.kitePos forcesKiteBeforeTransfer
+                , debugArrowForce "playerBeforeTransfer" "cyan" model.playerPos forcesPlayerBeforeTransfer
                 ]
                     ++ debugArrowsForce
         }
@@ -126,10 +130,10 @@ forcesOnKite model =
                 ( 0, normalizedAirVelocityX )
     in
         ( gravityForce
-            |> Vec2.add (Debug.log "Drag: " dragForce)
-            |> Vec2.add (Debug.log "Lift" liftForce)
-        , [ DebugArrow "drag" "red" model.kitePos (Vec2.scale 0.1 dragForce)
-          , DebugArrow "lift" "blue" model.kitePos (Vec2.scale 0.1 liftForce)
+            |> Vec2.add dragForce
+            |> Vec2.add liftForce
+        , [ debugArrowForce "drag" "red" model.kitePos dragForce
+          , debugArrowForce "lift" "blue" model.kitePos liftForce
           ]
         )
 
@@ -162,7 +166,7 @@ forcesOnPlayer model =
 
 coefficientOfFriction : Model -> Float
 coefficientOfFriction model =
-    1
+    5
 
 
 coefficientOfDrag : Model -> Float
@@ -183,22 +187,29 @@ forceTransferKite model forcesKite forcesPlayer =
 
         distanceToKite =
             Vec2.length tether
-
-        totalForce =
-            Vec2.sub forcesKite forcesPlayer
     in
-        if distanceToKite >= model.tetherLength - GameConstants.tetherForceTransferTolerance then
-            let
-                magnitude =
-                    max 0 (((Vec2.dot totalForce tether)) / (Vec2.lengthSquared tether))
-            in
-                Vec2.scale -magnitude tether
-        else
-            ( 0, 0 )
+        let
+            distanceFactor =
+                if distanceToKite >= model.tetherLength then
+                    1
+                else if distanceToKite < model.tetherLength - GameConstants.tetherForceTransferTolerance then
+                    0
+                else 
+                    ((GameConstants.tetherForceTransferTolerance - model.tetherLength + distanceToKite) / GameConstants.tetherForceTransferTolerance) ^ 2
 
+            magnitudeKite =
+                ((Vec2.dot forcesKite tether)) / (Vec2.lengthSquared tether)
 
-correctKiteForTether : Model -> Float2 -> Float2 -> ( Float2, Float2 )
-correctKiteForTether model proposedPosition proposedVelocity =
+            magnitudePlayer =
+                ((Vec2.dot forcesPlayer tether)) / (Vec2.lengthSquared tether)
+
+            magnitudeTotal = 
+                max 0 (magnitudeKite - magnitudePlayer)
+        in
+            Vec2.scale (-magnitudeTotal * distanceFactor) (Vec2.normalize tether)
+
+correctKiteForTether : Model -> Float -> Float2 -> Float2 -> ( Float2, Float2 )
+correctKiteForTether model timeStep proposedPosition proposedVelocity =
     let
         tether =
             (Vec2.sub proposedPosition model.playerPos)
@@ -207,11 +218,24 @@ correctKiteForTether model proposedPosition proposedVelocity =
             Vec2.length tether
     in
         if distanceToKite >= model.tetherLength then
-            ( Vec2.scale model.tetherLength (Vec2.normalize tether)
-                |> Vec2.add model.playerPos
-            , Vec2.scale -(((Vec2.dot proposedVelocity tether)) / (Vec2.lengthSquared tether)) tether
-                |> Vec2.add proposedVelocity
-            )
+            let
+            {-
+                projectedVelocity =
+                    (((Vec2.dot (Vec2.sub proposedVelocity model.playerVelocity) tether)) / (Vec2.lengthSquared tether))
+
+                velocityCorrectionMagnitude =
+              
+                    -projectedVelocity --* GameConstants.velocityCorrectionDamping * timeStep
+                    -}
+                newPosition = Vec2.scale model.tetherLength (Vec2.normalize tether)
+                    |> Vec2.add model.playerPos
+            in
+                ( newPosition
+                , Vec2.scale
+                        (1 / timeStep)
+                        (Debug.log "Correction" (Vec2.sub newPosition proposedPosition))
+                    |> Vec2.add proposedVelocity
+                )
         else
             ( proposedPosition, proposedVelocity )
 
@@ -222,3 +246,9 @@ correctForWater ( pos, velocity ) =
         ( ( Vec2.getX pos, 0 ), ( Vec2.getX velocity, 0 ) )
     else
         ( pos, velocity )
+
+
+debugArrowForce : String -> String -> Float2 -> Float2 -> DebugArrow
+debugArrowForce name color start vector =
+    DebugArrow name color start (Vec2.scale 0.1 vector)
+
