@@ -82,9 +82,9 @@ updatePhysics timeStep model =
                 else
                     model.windIndicatorX + model.windSpeed * timeStep
             , debugArrows =
-                [ DebugArrow "velocity" "green" model.kitePos modelWithImpulse.kiteVelocity
-                , DebugArrow "playerVelocity" "green" model.playerPos modelWithImpulse.playerVelocity
-                , DebugArrow "relativeVelocity" "gold" model.kitePos (Vec2.sub modelWithImpulse.kiteVelocity modelWithImpulse.playerVelocity)
+                [ DebugArrow "velocity" "green" model.kitePos correctKiteVelocity
+                , DebugArrow "playerVelocity" "green" model.playerPos correctPlayerVelocity
+                , DebugArrow "relativeVelocity" "gold" model.kitePos (Vec2.sub correctKiteVelocity correctPlayerVelocity)
                 , debugArrowForce "transfer" "pink" model.kitePos forceTransfer
                 , debugArrowForce "kiteBeforeTransfer" "cyan" model.kitePos forcesKiteBeforeTransfer
                 , debugArrowForce "playerBeforeTransfer" "cyan" model.playerPos forcesPlayerBeforeTransfer
@@ -219,19 +219,12 @@ correctKiteForTether model timeStep proposedPosition proposedVelocity =
     in
         if distanceToKite >= model.tetherLength then
             let
-            {-
-                projectedVelocity =
-                    (((Vec2.dot (Vec2.sub proposedVelocity model.playerVelocity) tether)) / (Vec2.lengthSquared tether))
-
-                velocityCorrectionMagnitude =
-              
-                    -projectedVelocity --* GameConstants.velocityCorrectionDamping * timeStep
-                    -}
                 newPosition = Vec2.scale model.tetherLength (Vec2.normalize tether)
                     |> Vec2.add model.playerPos
             in
                 ( newPosition
-                , Vec2.scale
+                , 
+                Vec2.scale
                         (1 / timeStep)
                         (Debug.log "Correction" (Vec2.sub newPosition proposedPosition))
                     |> Vec2.add proposedVelocity
@@ -243,7 +236,7 @@ correctKiteForTether model timeStep proposedPosition proposedVelocity =
 correctForWater : ( Float2, Float2 ) -> ( Float2, Float2 )
 correctForWater ( pos, velocity ) =
     if Vec2.getY pos < GameConstants.waterLevelY then
-        ( ( Vec2.getX pos, 0 ), ( Vec2.getX velocity, 0 ) )
+        ( ( Vec2.getX pos, GameConstants.waterLevelY ), ( Vec2.getX velocity, GameConstants.waterLevelY ) )
     else
         ( pos, velocity )
 
