@@ -15,32 +15,60 @@ float2ToStyle viewMatrix pos =
         ( x, y ) =
             Matrix3.transform viewMatrix pos
     in
-        [ ( "left", toString x )
-        , ( "top", toString y )
+        [ ( "left", toString x ++ "px" )
+        , ( "top", toString y ++ "px" )
+        ]
+
+
+float2ToSizeStyle : Matrix3.Float3x3 -> Float2 -> List ( String, String )
+float2ToSizeStyle viewMatrix ( sizeX, sizeY ) =
+    let
+        ( x, y, _ ) =
+            Matrix3.mulVector viewMatrix ( sizeX, sizeY, 0 )
+    in
+        [ ( "width", toString x ++ "px" )
+        , ( "height", toString (abs y) ++ "px" )
+          --TODO abs is bull shit
         ]
 
 
 view : Model -> Html Msg.Msg
 view model =
     let
-        viewMatrix = computeViewMatrix model
+        viewMatrix =
+            computeViewMatrix model
     in
-        
-    div [ Attr.class "game" ]
-        ((div
-            [ Attr.class "kite"
-            , Attr.style (float2ToStyle viewMatrix model.kitePos)
-            ]
-            []
-         )
-            :: (div [ Attr.class "player", Attr.style (float2ToStyle viewMatrix model.playerPos) ] [])
-            :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle viewMatrix ( model.windIndicatorX, 3 )) ] [])
-            :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle viewMatrix ( 60, 3 )) ] [])
-            :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle viewMatrix ( 3, 0 )) ] [])
-            --spacer
-            ::
-                (List.concatMap (viewDebugArrow viewMatrix) model.debugArrows)
-        )
+        div [ Attr.class "game" ]
+            ((List.map (viewGraphics viewMatrix) model.graphics)
+                ++ ((div
+                        [ Attr.class "kite"
+                        , Attr.style (float2ToStyle viewMatrix model.kitePos)
+                        ]
+                        []
+                    )
+                        :: (div [ Attr.class "player", Attr.style (float2ToStyle viewMatrix (Vec2.add model.playerPos (0,0.5))) ] [])
+                        :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle viewMatrix ( model.windIndicatorX, 3 )) ] [])
+                        :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle viewMatrix ( 60, 3 )) ] [])
+                        :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle viewMatrix ( 3, 0 )) ] [])
+                        :: []
+                    --spacer
+                   )
+                ++ (List.concatMap (viewDebugArrow viewMatrix) model.debugArrows)
+            )
+
+
+viewGraphics : Matrix3.Float3x3 -> Graphics -> Html Msg.Msg
+viewGraphics viewMatrix graphics =
+    div
+        [ Attr.class "graphics"
+        , Attr.style
+            ((( "background-color", graphics.color )
+                :: (float2ToStyle viewMatrix graphics.pos)
+             )
+                ++ (float2ToSizeStyle viewMatrix graphics.size)
+            )
+        ]
+        []
 
 
 viewDebugArrow : Matrix3.Float3x3 -> DebugArrow -> List (Html Msg.Msg)

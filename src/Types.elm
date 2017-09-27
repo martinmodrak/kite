@@ -1,4 +1,4 @@
-module Types exposing (Model, DebugArrow)
+module Types exposing (Model, DebugArrow, Graphics)
 
 import Vector2 as Vec2 exposing (Float2)
 
@@ -10,6 +10,12 @@ type alias DebugArrow =
     , vector : Float2
     }
 
+type alias Graphics = {
+    pos: Float2,
+    size: Float2,
+    color: String
+}
+
 type alias Model =
     { playerPos : Float2
     , playerVelocity : Float2
@@ -20,5 +26,6 @@ type alias Model =
     , windIndicatorX : Float
     , timeAccumulator : Float
     , totalTime : Float
+    , graphics: List Graphics
     , debugArrows : List DebugArrow
     }

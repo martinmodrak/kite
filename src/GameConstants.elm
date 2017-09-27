@@ -41,4 +41,4 @@ viewScaleY = -100
 
 playerPosOnScreen : Float2
 playerPosOnScreen = 
-    (400, 600)
+    (400, 500)

@@ -4,6 +4,8 @@ import Types exposing (..)
 import Msg
 import Time
 import GameConstants
+import LevelGenerator
+import Random
 import Vector2 as Vec2 exposing (Float2)
 
 
@@ -11,8 +13,34 @@ update : Msg.Msg -> Model -> ( Model, Cmd Msg.Msg )
 update msg model =
     case msg of
         Msg.Frame time ->
-            updatePhysicsWrapper (model.timeAccumulator + (Time.inSeconds time)) model
-                ! []
+            let
+                baseUpdate =
+                    updatePhysicsWrapper (model.timeAccumulator + (Time.inSeconds time)) model
+            in
+                if Vec2.getX model.playerPos > 10 then
+                    (baseUpdate |> moveGraphics -10 10)
+                        ! [ Random.generate Msg.AddGraphics (LevelGenerator.graphicsGenerator 10 20) ]
+                else
+                    baseUpdate ! []
+
+        Msg.AddGraphics graphics ->
+            { model | graphics = model.graphics ++ graphics } ! []
+
+
+moveGraphics : Float -> Float -> Model -> Model
+moveGraphics cutOff move model =
+    let 
+        moveVec = \(x,y) -> (x - move, y)
+    in
+    { model
+        | playerPos = moveVec model.playerPos,
+        kitePos = moveVec model.kitePos,
+        windIndicatorX = model.windIndicatorX - move,
+        graphics =
+            model.graphics
+                |> List.filter (\x -> (Vec2.getX x.pos) + (Vec2.getX x.size) > cutOff)
+                |> List.map (\x -> { x | pos = moveVec x.pos })
+    }
 
 
 updatePhysicsWrapper : Float -> Model -> Model
@@ -85,7 +113,7 @@ updatePhysics timeStep model =
                 [ DebugArrow "velocity" "green" model.kitePos correctKiteVelocity
                 , DebugArrow "playerVelocity" "green" model.playerPos correctPlayerVelocity
                 , DebugArrow "relativeVelocity" "gold" model.kitePos (Vec2.sub correctKiteVelocity correctPlayerVelocity)
-                , debugArrowForce "transfer" "pink" model.kitePos forceTransfer
+                , debugArrowForce "transfer" "pink" model.playerPos (Vec2.scale -1 forceTransfer)
                 , debugArrowForce "kiteBeforeTransfer" "cyan" model.kitePos forcesKiteBeforeTransfer
                 , debugArrowForce "playerBeforeTransfer" "cyan" model.playerPos forcesPlayerBeforeTransfer
                 ]
@@ -194,7 +222,7 @@ forceTransferKite model forcesKite forcesPlayer =
                     1
                 else if distanceToKite < model.tetherLength - GameConstants.tetherForceTransferTolerance then
                     0
-                else 
+                else
                     ((GameConstants.tetherForceTransferTolerance - model.tetherLength + distanceToKite) / GameConstants.tetherForceTransferTolerance) ^ 2
 
             magnitudeKite =
@@ -203,10 +231,11 @@ forceTransferKite model forcesKite forcesPlayer =
             magnitudePlayer =
                 ((Vec2.dot forcesPlayer tether)) / (Vec2.lengthSquared tether)
 
-            magnitudeTotal = 
+            magnitudeTotal =
                 max 0 (magnitudeKite - magnitudePlayer)
         in
             Vec2.scale (-magnitudeTotal * distanceFactor) (Vec2.normalize tether)
+
 
 correctKiteForTether : Model -> Float -> Float2 -> Float2 -> ( Float2, Float2 )
 correctKiteForTether model timeStep proposedPosition proposedVelocity =
@@ -219,14 +248,14 @@ correctKiteForTether model timeStep proposedPosition proposedVelocity =
     in
         if distanceToKite >= model.tetherLength then
             let
-                newPosition = Vec2.scale model.tetherLength (Vec2.normalize tether)
-                    |> Vec2.add model.playerPos
+                newPosition =
+                    Vec2.scale model.tetherLength (Vec2.normalize tether)
+                        |> Vec2.add model.playerPos
             in
                 ( newPosition
-                , 
-                Vec2.scale
-                        (1 / timeStep)
-                        (Debug.log "Correction" (Vec2.sub newPosition proposedPosition))
+                , Vec2.scale
+                    (1 / timeStep)
+                    (Debug.log "Correction" (Vec2.sub newPosition proposedPosition))
                     |> Vec2.add proposedVelocity
                 )
         else
@@ -244,4 +273,3 @@ correctForWater ( pos, velocity ) =
 debugArrowForce : String -> String -> Float2 -> Float2 -> DebugArrow
 debugArrowForce name color start vector =
     DebugArrow name color start (Vec2.scale 0.1 vector)
-
