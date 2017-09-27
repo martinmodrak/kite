@@ -17,5 +17,6 @@ type alias Model =
     , tetherLength : Float
     , windSpeed : Float
     , timeAccumulator : Float
+    , totalTime : Float
     , debugArrows : List DebugArrow
     }

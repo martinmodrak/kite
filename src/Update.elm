@@ -22,19 +22,21 @@ updatePhysicsWrapper timeAccumulator model =
     else if timeAccumulator > GameConstants.physicsUpdateTime then
         updatePhysicsWrapper
             (timeAccumulator - GameConstants.physicsUpdateTime)
-            (updatePhysics GameConstants.physicsUpdateTime model)
+            (updatePhysics (GameConstants.physicsUpdateTime * GameConstants.physicsTimeWarp) model)
     else
-        { model | timeAccumulator = timeAccumulator }
+        { model | timeAccumulator = timeAccumulator}
 
 
 updatePhysics : Float -> Model -> Model
 updatePhysics timeStep model =
     let
-        (forcesKiteBeforeTransfer, debugArrowsForce)  =
+        ( forcesKiteBeforeTransfer, debugArrowsForce ) =
             forcesOnKite model
 
-        forcesKite=
-            Vec2.add (Debug.log "Transfer: " (forceTransfer model forcesKiteBeforeTransfer)) forcesKiteBeforeTransfer
+        forceTransfer = 
+            forceTransferKite model forcesKiteBeforeTransfer
+        forcesKite =
+            Vec2.add forceTransfer forcesKiteBeforeTransfer
 
         --symplectic Euler - update velocity before updating position
         modelWithForces =
@@ -45,22 +47,29 @@ updatePhysics timeStep model =
         modelWithImpulse =
             { modelWithForces
                 | kiteVelocity =
-                    impulseOnKite modelWithForces --TODO lano se musi pridat do impulse
+                    impulseOnKite modelWithForces
             }
+
+        kitePosWithImpulse =
+            Vec2.add modelWithImpulse.kitePos (Vec2.scale timeStep modelWithImpulse.kiteVelocity)
+
+        ( correctKitePos, correctKiteVelocity ) =
+            correctKiteForTether modelWithImpulse kitePosWithImpulse modelWithImpulse.kiteVelocity
     in
         { modelWithImpulse
-            | kitePos =
-                Vec2.add modelWithImpulse.kitePos (Vec2.scale timeStep modelWithImpulse.kiteVelocity)
-                    |> correctKitePos modelWithImpulse --TODO correct kitePos je spatne - MUSI menit velocity
-            , debugArrows =  [
-                DebugArrow "velocity" "green" model.kitePos modelWithImpulse.kiteVelocity
-            ]
-            ++ debugArrowsForce
-                
+            | kitePos = correctKitePos
+            , kiteVelocity = correctKiteVelocity
+            , totalTime = model.totalTime + timeStep
+            , windSpeed = 5 + (sin model.totalTime * 2)
+            , debugArrows =
+                [ DebugArrow "velocity" "green" model.kitePos modelWithImpulse.kiteVelocity
+                , DebugArrow "transfer" "pink" model.kitePos (Vec2.scale 0.1 forceTransfer)
+                ]
+                    ++ debugArrowsForce
         }
 
 
-forcesOnKite : Model -> (Float2, List DebugArrow)
+forcesOnKite : Model -> ( Float2, List DebugArrow )
 forcesOnKite model =
     let
         kiteY =
@@ -97,15 +106,15 @@ forcesOnKite model =
             Vec2.scale
                 (0.5 * kiteAirSpeed ^ 2 * (coefficientOfLift model))
                 --TODO: cross sectional area (but maybe included in coefficient of drag)
-                ( -normalizedAirVelocityY, normalizedAirVelocityX )
+                ( 0, normalizedAirVelocityX )
     in
-        (gravityForce
+        ( gravityForce
             |> Vec2.add (Debug.log "Drag: " dragForce)
             |> Vec2.add (Debug.log "Lift" liftForce)
-        , [ DebugArrow "drag" "red" model.kitePos dragForce
-        , DebugArrow "lift" "blue" model.kitePos liftForce
-
-        ])
+        , [ DebugArrow "drag" "red" model.kitePos (Vec2.scale 0.1 dragForce)
+          , DebugArrow "lift" "blue" model.kitePos (Vec2.scale 0.1 liftForce)
+          ]
+        )
 
 
 impulseOnKite : Model -> Float2
@@ -130,11 +139,11 @@ coefficientOfDrag model =
 
 coefficientOfLift : Model -> Float
 coefficientOfLift model =
-    2
+    1
 
 
-forceTransfer : Model -> Float2 -> Float2
-forceTransfer model forcesKite =
+forceTransferKite : Model -> Float2 -> Float2
+forceTransferKite model forcesKite =
     let
         tether =
             (Vec2.sub model.kitePos model.anchorPos)
@@ -142,14 +151,18 @@ forceTransfer model forcesKite =
         distanceToKite =
             Vec2.length tether
     in
-        if distanceToKite >= model.tetherLength then
-            Vec2.scale -(((Vec2.dot forcesKite tether)) / (Vec2.lengthSquared tether)) tether
+        if distanceToKite >= model.tetherLength - GameConstants.tetherForceTransferTolerance then
+            let 
+                magnitude =
+                    max 0 (((Vec2.dot forcesKite tether)) / (Vec2.lengthSquared tether))
+            in
+                Vec2.scale -magnitude tether
         else
             ( 0, 0 )
 
 
-correctKitePos : Model -> Float2 -> Float2
-correctKitePos model proposedPosition =
+correctKiteForTether : Model -> Float2 -> Float2 -> ( Float2, Float2 )
+correctKiteForTether model proposedPosition proposedVelocity =
     let
         tether =
             (Vec2.sub proposedPosition model.anchorPos)
@@ -158,7 +171,10 @@ correctKitePos model proposedPosition =
             Vec2.length tether
     in
         if distanceToKite >= model.tetherLength then
-            Vec2.scale model.tetherLength (Vec2.normalize tether)
+            ( Vec2.scale model.tetherLength (Vec2.normalize tether)
                 |> Vec2.add model.anchorPos
+            , Vec2.scale -(((Vec2.dot proposedVelocity tether)) / (Vec2.lengthSquared tether)) tether
+                |> Vec2.add proposedVelocity
+            )
         else
-            proposedPosition
+            ( proposedPosition, proposedVelocity )

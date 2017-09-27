@@ -6,11 +6,17 @@ import Vector2 exposing (Float2)
 physicsUpdateTime: Float
 physicsUpdateTime = 0.04
 
+physicsTimeWarp : Float
+physicsTimeWarp = 1
+
 maxTimeAccumulator: Float
 maxTimeAccumulator = 1
 
 kiteWeight: Float
-kiteWeight = 1
+kiteWeight = 0.1
+
+tetherForceTransferTolerance: Float
+tetherForceTransferTolerance = 0.1
 
 gravity: Float2
 gravity = (0, -10)
