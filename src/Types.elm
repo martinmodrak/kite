@@ -11,11 +11,13 @@ type alias DebugArrow =
     }
 
 type alias Model =
-    { anchorPos : Float2
+    { playerPos : Float2
+    , playerVelocity : Float2
     , kitePos : Float2
     , kiteVelocity : Float2
     , tetherLength : Float
     , windSpeed : Float
+    , windIndicatorX : Float
     , timeAccumulator : Float
     , totalTime : Float
     , debugArrows : List DebugArrow

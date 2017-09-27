@@ -24,7 +24,7 @@ updatePhysicsWrapper timeAccumulator model =
             (timeAccumulator - GameConstants.physicsUpdateTime)
             (updatePhysics (GameConstants.physicsUpdateTime * GameConstants.physicsTimeWarp) model)
     else
-        { model | timeAccumulator = timeAccumulator}
+        { model | timeAccumulator = timeAccumulator }
 
 
 updatePhysics : Float -> Model -> Model
@@ -33,34 +33,54 @@ updatePhysics timeStep model =
         ( forcesKiteBeforeTransfer, debugArrowsForce ) =
             forcesOnKite model
 
-        forceTransfer = 
-            forceTransferKite model forcesKiteBeforeTransfer
+        forcesPlayerBeforeTransfer =
+            forcesOnPlayer model
+
+        forceTransfer =
+            forceTransferKite model forcesKiteBeforeTransfer forcesPlayerBeforeTransfer
+
         forcesKite =
             Vec2.add forceTransfer forcesKiteBeforeTransfer
+
+        forcesPlayer =
+            Vec2.sub forcesPlayerBeforeTransfer forceTransfer
 
         --symplectic Euler - update velocity before updating position
         modelWithForces =
             { model
-                | kiteVelocity = Vec2.add model.kiteVelocity (Vec2.scale (timeStep / GameConstants.kiteWeight) forcesKite)
+                | playerVelocity = Vec2.add model.playerVelocity (Vec2.scale (timeStep / GameConstants.playerWeight) forcesPlayer)
+                , kiteVelocity = Vec2.add model.kiteVelocity (Vec2.scale (timeStep / GameConstants.kiteWeight) forcesKite)
             }
 
         modelWithImpulse =
-            { modelWithForces
-                | kiteVelocity =
-                    impulseOnKite modelWithForces
-            }
+            modelWithForces
 
         kitePosWithImpulse =
             Vec2.add modelWithImpulse.kitePos (Vec2.scale timeStep modelWithImpulse.kiteVelocity)
 
+        playerPosWithImpulse =
+            Vec2.add modelWithImpulse.playerPos (Vec2.scale timeStep modelWithImpulse.playerVelocity)
+
         ( correctKitePos, correctKiteVelocity ) =
             correctKiteForTether modelWithImpulse kitePosWithImpulse modelWithImpulse.kiteVelocity
+                |> correctForWater
+
+        ( correctPlayerPos, correctPlayerVelocity ) =
+            ( playerPosWithImpulse, modelWithImpulse.playerVelocity )
+                |> correctForWater
     in
         { modelWithImpulse
             | kitePos = correctKitePos
             , kiteVelocity = correctKiteVelocity
+            , playerPos = correctPlayerPos
+            , playerVelocity = correctPlayerVelocity
             , totalTime = model.totalTime + timeStep
             , windSpeed = 5 + (sin model.totalTime * 2)
+            , windIndicatorX =
+                if (model.windIndicatorX > 10) then
+                    -10
+                else
+                    model.windIndicatorX + model.windSpeed * timeStep
             , debugArrows =
                 [ DebugArrow "velocity" "green" model.kitePos modelWithImpulse.kiteVelocity
                 , DebugArrow "transfer" "pink" model.kitePos (Vec2.scale 0.1 forceTransfer)
@@ -76,10 +96,7 @@ forcesOnKite model =
             (Vec2.getY model.kitePos)
 
         gravityForce =
-            if kiteY > 0.001 then
-                Vec2.scale GameConstants.kiteWeight GameConstants.gravity
-            else
-                ( 0, 0 )
+            Vec2.scale GameConstants.kiteWeight GameConstants.gravity
 
         airVelocity =
             Vec2.scale model.windSpeed GameConstants.windDirection
@@ -117,19 +134,35 @@ forcesOnKite model =
         )
 
 
-impulseOnKite : Model -> Float2
-impulseOnKite model =
+forcesOnPlayer : Model -> Float2
+forcesOnPlayer model =
     let
-        kiteY =
-            (Vec2.getY model.kitePos)
+        gravityForce =
+            Vec2.scale GameConstants.playerWeight GameConstants.gravity
 
-        ( kiteVelocityX, kiteVelocityY ) =
-            model.kiteVelocity
+        frictionForce =
+            if (Vec2.getY model.playerPos < GameConstants.waterLevelY + 0.1) then
+                let
+                    velocityX =
+                        Vec2.getX model.playerVelocity
+
+                    sign =
+                        if velocityX > 0 then
+                            -1
+                        else
+                            1
+                in
+                    ( sign * velocityX ^ 2 * (coefficientOfFriction model), 0 )
+            else
+                ( 0, 0 )
     in
-        if (kiteY < -0.001) && (kiteVelocityY < 0) then
-            ( kiteVelocityX, -0.3 * kiteVelocityY )
-        else
-            model.kiteVelocity
+        gravityForce
+            |> Vec2.add frictionForce
+
+
+coefficientOfFriction : Model -> Float
+coefficientOfFriction model =
+    1
 
 
 coefficientOfDrag : Model -> Float
@@ -142,19 +175,22 @@ coefficientOfLift model =
     1
 
 
-forceTransferKite : Model -> Float2 -> Float2
-forceTransferKite model forcesKite =
+forceTransferKite : Model -> Float2 -> Float2 -> Float2
+forceTransferKite model forcesKite forcesPlayer =
     let
         tether =
-            (Vec2.sub model.kitePos model.anchorPos)
+            (Vec2.sub model.kitePos model.playerPos)
 
         distanceToKite =
             Vec2.length tether
+
+        totalForce =
+            Vec2.sub forcesKite forcesPlayer
     in
         if distanceToKite >= model.tetherLength - GameConstants.tetherForceTransferTolerance then
-            let 
+            let
                 magnitude =
-                    max 0 (((Vec2.dot forcesKite tether)) / (Vec2.lengthSquared tether))
+                    max 0 (((Vec2.dot totalForce tether)) / (Vec2.lengthSquared tether))
             in
                 Vec2.scale -magnitude tether
         else
@@ -165,16 +201,24 @@ correctKiteForTether : Model -> Float2 -> Float2 -> ( Float2, Float2 )
 correctKiteForTether model proposedPosition proposedVelocity =
     let
         tether =
-            (Vec2.sub proposedPosition model.anchorPos)
+            (Vec2.sub proposedPosition model.playerPos)
 
         distanceToKite =
             Vec2.length tether
     in
         if distanceToKite >= model.tetherLength then
             ( Vec2.scale model.tetherLength (Vec2.normalize tether)
-                |> Vec2.add model.anchorPos
+                |> Vec2.add model.playerPos
             , Vec2.scale -(((Vec2.dot proposedVelocity tether)) / (Vec2.lengthSquared tether)) tether
                 |> Vec2.add proposedVelocity
             )
         else
             ( proposedPosition, proposedVelocity )
+
+
+correctForWater : ( Float2, Float2 ) -> ( Float2, Float2 )
+correctForWater ( pos, velocity ) =
+    if Vec2.getY pos < GameConstants.waterLevelY then
+        ( ( Vec2.getX pos, 0 ), ( Vec2.getX velocity, 0 ) )
+    else
+        ( pos, velocity )

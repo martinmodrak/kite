@@ -29,7 +29,8 @@ view model =
             ]
             []
          )
-            :: (div [ Attr.class "anchor", Attr.style (float2ToStyle model.anchorPos) ] [])
+            :: (div [ Attr.class "player", Attr.style (float2ToStyle model.playerPos) ] [])
+            :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle (model.windIndicatorX, 3))] [])
             :: (List.concatMap viewDebugArrow model.debugArrows)
         )
 

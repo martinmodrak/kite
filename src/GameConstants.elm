@@ -7,7 +7,7 @@ physicsUpdateTime: Float
 physicsUpdateTime = 0.04
 
 physicsTimeWarp : Float
-physicsTimeWarp = 1
+physicsTimeWarp = 0.1
 
 maxTimeAccumulator: Float
 maxTimeAccumulator = 1
@@ -15,8 +15,14 @@ maxTimeAccumulator = 1
 kiteWeight: Float
 kiteWeight = 0.1
 
+playerWeight: Float
+playerWeight = 2
+
 tetherForceTransferTolerance: Float
 tetherForceTransferTolerance = 0.1
+
+waterLevelY: Float
+waterLevelY = 0
 
 gravity: Float2
 gravity = (0, -10)
