@@ -8,6 +8,9 @@ physicsUpdateTime = 0.04
 physicsTimeWarp : Float
 physicsTimeWarp = 1
 
+physicsFrameSkip : Float
+physicsFrameSkip = 1
+
 maxTimeAccumulator: Float
 maxTimeAccumulator = 1
 
@@ -23,6 +26,12 @@ tetherForceTransferTolerance = 0.2
 velocityCorrectionDamping: Float
 velocityCorrectionDamping =
     1
+
+maxVelocity: Float
+maxVelocity = 50
+
+maxVelocitySquared: Float
+maxVelocitySquared = maxVelocity ^ 2
 
 waterLevelY: Float
 waterLevelY = 0

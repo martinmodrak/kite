@@ -47,9 +47,9 @@ updatePhysicsWrapper : Float -> Model -> Model
 updatePhysicsWrapper timeAccumulator model =
     if timeAccumulator > GameConstants.maxTimeAccumulator then
         updatePhysicsWrapper GameConstants.maxTimeAccumulator model
-    else if timeAccumulator > GameConstants.physicsUpdateTime then
+    else if timeAccumulator > GameConstants.physicsUpdateTime * GameConstants.physicsFrameSkip then
         updatePhysicsWrapper
-            (timeAccumulator - GameConstants.physicsUpdateTime)
+            (timeAccumulator - GameConstants.physicsUpdateTime * GameConstants.physicsFrameSkip)
             (updatePhysics (GameConstants.physicsUpdateTime * GameConstants.physicsTimeWarp) model)
     else
         { model | timeAccumulator = timeAccumulator }
@@ -91,11 +91,11 @@ updatePhysics timeStep model =
 
         ( correctKitePos, correctKiteVelocity ) =
             correctKiteForTether modelWithImpulse timeStep kitePosWithImpulse modelWithImpulse.kiteVelocity
-                |> correctForWater
+                |> correctForWater |> correctForMaxVelocity
 
         ( correctPlayerPos, correctPlayerVelocity ) =
             ( playerPosWithImpulse, modelWithImpulse.playerVelocity )
-                |> correctForWater
+                |> correctForWater |> correctForMaxVelocity
     in
         { modelWithImpulse
             | kitePos = correctKitePos
@@ -103,7 +103,7 @@ updatePhysics timeStep model =
             , playerPos = correctPlayerPos
             , playerVelocity = correctPlayerVelocity
             , totalTime = model.totalTime + timeStep
-            , windSpeed = 5 + (sin model.totalTime * 2)
+            , windSpeed = 15 + (sin model.totalTime * 2)
             , windIndicatorX =
                 if (model.windIndicatorX > 10) then
                     -10
@@ -194,7 +194,7 @@ forcesOnPlayer model =
 
 coefficientOfFriction : Model -> Float
 coefficientOfFriction model =
-    5
+    3
 
 
 coefficientOfDrag : Model -> Float
@@ -204,7 +204,7 @@ coefficientOfDrag model =
 
 coefficientOfLift : Model -> Float
 coefficientOfLift model =
-    1
+    0.5
 
 
 forceTransferKite : Model -> Float2 -> Float2 -> Float2
@@ -254,7 +254,7 @@ correctKiteForTether model timeStep proposedPosition proposedVelocity =
             in
                 ( newPosition
                 , Vec2.scale
-                    (1 / timeStep)
+                    (1 / timeStep) --TODO The correction does not work for velocity
                     (Debug.log "Correction" (Vec2.sub newPosition proposedPosition))
                     |> Vec2.add proposedVelocity
                 )
@@ -268,6 +268,14 @@ correctForWater ( pos, velocity ) =
         ( ( Vec2.getX pos, GameConstants.waterLevelY ), ( Vec2.getX velocity, GameConstants.waterLevelY ) )
     else
         ( pos, velocity )
+
+correctForMaxVelocity : ( Float2, Float2 ) -> ( Float2, Float2 )
+correctForMaxVelocity ( pos, velocity ) =
+    if Vec2.lengthSquared velocity > GameConstants.maxVelocitySquared then
+        ( pos, Vec2.scale GameConstants.maxVelocity (Vec2.normalize velocity))
+    else
+        ( pos, velocity )
+
 
 
 debugArrowForce : String -> String -> Float2 -> Float2 -> DebugArrow
