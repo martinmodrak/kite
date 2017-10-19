@@ -10,6 +10,7 @@ import Init exposing (..)
 import Types exposing(..)
 import Platform.Sub
 import AnimationFrame
+import Keyboard
 
 main =
     Html.program
@@ -21,7 +22,10 @@ main =
 
 subscriptions : Model -> Platform.Sub.Sub Msg.Msg 
 subscriptions _ = 
-    AnimationFrame.diffs Msg.Frame        
+    Platform.Sub.batch [
+        AnimationFrame.diffs Msg.Frame        
+        , Keyboard.presses Msg.KeyPress
+        ]
     
 
 

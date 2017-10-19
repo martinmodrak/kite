@@ -38,8 +38,12 @@ view model =
         viewMatrix =
             computeViewMatrix model
     in
-        div [ Attr.class "game" ]
-            ((List.map (viewGraphics viewMatrix) model.graphics)
+        div [ Attr.class "game" ]            
+            (
+                (text ("Wind: " ++ (toString model.windSpeed) 
+                ++ " Lift: " ++ (toString model.kiteLiftCoefficient)
+                ++ " Drag: " ++ (toString model.kiteDragCoefficient))) ::                
+                (List.map (viewGraphics viewMatrix) model.graphics)
                 ++ ((div
                         [ Attr.class "kite"
                         , Attr.style (float2ToStyle viewMatrix model.kitePos)
@@ -53,7 +57,7 @@ view model =
                         :: []
                     --spacer
                    )
-                ++ (List.concatMap (viewDebugArrow viewMatrix) model.debugArrows)
+                ++ (List.concatMap (viewDebugArrow viewMatrix model.debugArrowsScale) model.debugArrows)
             )
 
 
@@ -71,11 +75,11 @@ viewGraphics viewMatrix graphics =
         []
 
 
-viewDebugArrow : Matrix3.Float3x3 -> DebugArrow -> List (Html Msg.Msg)
-viewDebugArrow viewMatrix arrow =
+viewDebugArrow : Matrix3.Float3x3 -> Float -> DebugArrow -> List (Html Msg.Msg)
+viewDebugArrow viewMatrix scale arrow =
     let
         endPosition =
-            (Vec2.add arrow.start (Vec2.scale 0.1 arrow.vector))
+            (Vec2.add arrow.start (Vec2.scale scale arrow.vector))
     in
         [ div
             [ Attr.class "debugArrowSource"

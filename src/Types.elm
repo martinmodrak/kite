@@ -21,6 +21,8 @@ type alias Model =
     , playerVelocity : Float2
     , kitePos : Float2
     , kiteVelocity : Float2
+    , kiteLiftCoefficient : Float
+    , kiteDragCoefficient : Float
     , tetherLength : Float
     , windSpeed : Float
     , windIndicatorX : Float
@@ -28,4 +30,5 @@ type alias Model =
     , totalTime : Float
     , graphics: List Graphics
     , debugArrows : List DebugArrow
+    , debugArrowsScale : Float
     }

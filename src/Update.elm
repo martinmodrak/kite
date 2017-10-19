@@ -7,7 +7,7 @@ import GameConstants
 import LevelGenerator
 import Random
 import Vector2 as Vec2 exposing (Float2)
-
+import Char
 
 update : Msg.Msg -> Model -> ( Model, Cmd Msg.Msg )
 update msg model =
@@ -25,6 +25,27 @@ update msg model =
 
         Msg.AddGraphics graphics ->
             { model | graphics = model.graphics ++ graphics } ! []
+
+        Msg.KeyPress code ->
+            (case Char.fromCode code of
+                'q' ->
+                    { model | windSpeed = model.windSpeed + 0.5}
+                'w' ->
+                    { model | windSpeed = model.windSpeed - 0.5}
+                'a' ->
+                    { model | kiteLiftCoefficient = model.kiteLiftCoefficient + 0.05}
+                's' ->
+                    { model | kiteLiftCoefficient = model.kiteLiftCoefficient - 0.05}
+                'd' ->
+                    { model | kiteDragCoefficient = model.kiteDragCoefficient + 0.05}
+                'f' ->
+                    { model | kiteDragCoefficient = model.kiteDragCoefficient - 0.05}
+                'o' ->
+                    { model | debugArrowsScale = model.debugArrowsScale + 0.05}
+                'p' ->
+                    { model | debugArrowsScale = model.debugArrowsScale - 0.05}
+                _ -> model
+            ) ! []       
 
 
 moveGraphics : Float -> Float -> Model -> Model
@@ -103,7 +124,6 @@ updatePhysics timeStep model =
             , playerPos = correctPlayerPos
             , playerVelocity = correctPlayerVelocity
             , totalTime = model.totalTime + timeStep
-            , windSpeed = GameConstants.windBase + (sin model.totalTime * GameConstants.windFluctuation)
             , windIndicatorX =
                 if (model.windIndicatorX > 10) then
                     -10
@@ -207,12 +227,12 @@ coefficientOfFriction model =
 
 coefficientOfDrag : Model -> Float
 coefficientOfDrag model =
-    1
+    model.kiteDragCoefficient
 
 
 coefficientOfLift : Model -> Float
 coefficientOfLift model =
-    0.5
+    model.kiteLiftCoefficient
 
 
 forceTransferKite : Model -> Float2 -> Float2 -> Float2
@@ -245,7 +265,7 @@ forceTransferKite model forcesKite forcesPlayer =
             magnitudeTotal =
                 max 0 (magnitudeKite - magnitudePlayer)
         in
-            Vec2.scale (-magnitudeTotal * (Debug.log "Dist factor" distanceFactor))
+            Vec2.scale (-magnitudeTotal * distanceFactor)
              (Vec2.normalize tether)
 
 

@@ -2,8 +2,10 @@ module Msg exposing(Msg(..))
 
 import Time
 import Types exposing(..)
+import Keyboard
 
 type Msg = 
     Frame Time.Time
-    | AddGraphics (List Graphics)
+    | KeyPress Keyboard.KeyCode
+    | AddGraphics (List Graphics)    
 

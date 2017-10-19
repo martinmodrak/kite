@@ -55,11 +55,13 @@ playerPosOnScreen : Float2
 playerPosOnScreen = 
     (400, 500)
 
+{-
 windBase : Float
 windBase = 15
 
 windFluctuation : Float
 windFluctuation = 2
+-}
 
 waterFrictionTolerance : Float
 waterFrictionTolerance = 0.1
