@@ -46,7 +46,7 @@ view model =
                         ]
                         []
                     )
-                        :: (div [ Attr.class "player", Attr.style (float2ToStyle viewMatrix (Vec2.add model.playerPos (0,0.5))) ] [])
+                        :: (div [ Attr.class "player", Attr.style (float2ToStyle viewMatrix (Vec2.add model.playerPos ( 0, 0.5 ))) ] [])
                         :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle viewMatrix ( model.windIndicatorX, 3 )) ] [])
                         :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle viewMatrix ( 60, 3 )) ] [])
                         :: (div [ Attr.class "windIndicator", Attr.style (float2ToStyle viewMatrix ( 3, 0 )) ] [])
@@ -73,22 +73,26 @@ viewGraphics viewMatrix graphics =
 
 viewDebugArrow : Matrix3.Float3x3 -> DebugArrow -> List (Html Msg.Msg)
 viewDebugArrow viewMatrix arrow =
-    [ div
-        [ Attr.class "debugArrowSource"
-        , Attr.style (( "background-color", arrow.color ) :: (float2ToStyle viewMatrix arrow.start))
+    let
+        endPosition =
+            (Vec2.add arrow.start (Vec2.scale 0.1 arrow.vector))
+    in
+        [ div
+            [ Attr.class "debugArrowSource"
+            , Attr.style (( "background-color", arrow.color ) :: (float2ToStyle viewMatrix arrow.start))
+            ]
+            []
+        , div
+            [ Attr.class "debugArrowEnd"
+            , Attr.style (( "background-color", arrow.color ) :: (float2ToStyle viewMatrix endPosition))
+            ]
+            []
+        , div
+            [ Attr.class "debugArrowCaption"
+            , Attr.style (( "color", arrow.color ) :: (float2ToStyle viewMatrix endPosition))
+            ]
+            [ text arrow.name ]
         ]
-        []
-    , div
-        [ Attr.class "debugArrowEnd"
-        , Attr.style (( "background-color", arrow.color ) :: (float2ToStyle viewMatrix (Vec2.add arrow.start arrow.vector)))
-        ]
-        []
-    , div
-        [ Attr.class "debugArrowCaption"
-        , Attr.style (( "color", arrow.color ) :: (float2ToStyle viewMatrix (Vec2.add arrow.start arrow.vector)))
-        ]
-        [ text arrow.name ]
-    ]
 
 
 computeViewMatrix : Model -> Matrix3.Float3x3

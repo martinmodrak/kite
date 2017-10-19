@@ -103,7 +103,7 @@ updatePhysics timeStep model =
             , playerPos = correctPlayerPos
             , playerVelocity = correctPlayerVelocity
             , totalTime = model.totalTime + timeStep
-            , windSpeed = 15 + (sin model.totalTime * 2)
+            , windSpeed = GameConstants.windBase + (sin model.totalTime * GameConstants.windFluctuation)
             , windIndicatorX =
                 if (model.windIndicatorX > 10) then
                     -10
@@ -172,8 +172,11 @@ forcesOnPlayer model =
         gravityForce =
             Vec2.scale GameConstants.playerWeight GameConstants.gravity
 
+        playerY = 
+            Vec2.getY model.playerPos
+
         frictionForce =
-            if (Vec2.getY model.playerPos < GameConstants.waterLevelY + 0.1) then
+            if (playerY < GameConstants.waterLevelY + GameConstants.waterFrictionTolerance) then
                 let
                     velocityX =
                         Vec2.getX model.playerVelocity
@@ -183,8 +186,13 @@ forcesOnPlayer model =
                             -1
                         else
                             1
+                    smoothingCoefficient =
+                        if playerY < GameConstants.waterLevelY then 
+                            1
+                        else 
+                            1 - ((playerY - GameConstants.waterLevelY) / GameConstants.waterFrictionTolerance)
                 in
-                    ( sign * velocityX ^ 2 * (coefficientOfFriction model), 0 )
+                    ( sign * velocityX ^ 2 * smoothingCoefficient * (coefficientOfFriction model), 0 )
             else
                 ( 0, 0 )
     in
@@ -215,15 +223,18 @@ forceTransferKite model forcesKite forcesPlayer =
 
         distanceToKite =
             Vec2.length tether
+
+        rampEnd = model.tetherLength - GameConstants.tetherForceTransferTolerance
+        rampStart = rampEnd - GameConstants.tetherForceTransferRamp
     in
         let
             distanceFactor =
-                if distanceToKite >= model.tetherLength then
+                if distanceToKite >= rampEnd then
                     1
-                else if distanceToKite < model.tetherLength - GameConstants.tetherForceTransferTolerance then
+                else if distanceToKite < rampStart then
                     0
                 else
-                    ((GameConstants.tetherForceTransferTolerance - model.tetherLength + distanceToKite) / GameConstants.tetherForceTransferTolerance) ^ 2
+                    ((distanceToKite - rampStart) / (rampEnd - rampStart))
 
             magnitudeKite =
                 ((Vec2.dot forcesKite tether)) / (Vec2.lengthSquared tether)
@@ -234,7 +245,8 @@ forceTransferKite model forcesKite forcesPlayer =
             magnitudeTotal =
                 max 0 (magnitudeKite - magnitudePlayer)
         in
-            Vec2.scale (-magnitudeTotal * distanceFactor) (Vec2.normalize tether)
+            Vec2.scale (-magnitudeTotal * (Debug.log "Dist factor" distanceFactor))
+             (Vec2.normalize tether)
 
 
 correctKiteForTether : Model -> Float -> Float2 -> Float2 -> ( Float2, Float2 )
@@ -254,8 +266,8 @@ correctKiteForTether model timeStep proposedPosition proposedVelocity =
             in
                 ( newPosition
                 , Vec2.scale
-                    (1 / timeStep) --TODO The correction does not work for velocity
-                    (Debug.log "Correction" (Vec2.sub newPosition proposedPosition))
+                    (1 / timeStep) 
+                    (Vec2.sub newPosition proposedPosition)
                     |> Vec2.add proposedVelocity
                 )
         else
