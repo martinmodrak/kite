@@ -15,7 +15,7 @@ graphicsGenerator startPos endPos =
             Random.pair (Random.float 0.1 1.3) (Random.float 0.05 0.3)
 
         singleGraphicsGenerator =
-            Random.map2 (\pos size -> Graphics pos size "lightblue") posGenerator sizeGenerator
+            Random.map2 (\pos size -> Graphics pos size "rgb(221,243,249)") posGenerator sizeGenerator
 
         maxGraphics =
             ceiling ((endPos - startPos) / 0.1)
@@ -24,7 +24,7 @@ graphicsGenerator startPos endPos =
             maxGraphics // 2
 
         baseGraphics =
-            Graphics ( startPos, 0 ) ( endPos - startPos, 4 ) "blue"
+            Graphics ( startPos, 0 ) ( endPos - startPos, 4 ) "rgb(153,217,234)"
     in
         Random.int minGraphics maxGraphics
             |> Random.andThen

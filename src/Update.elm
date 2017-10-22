@@ -13,15 +13,18 @@ update : Msg.Msg -> Model -> ( Model, Cmd Msg.Msg )
 update msg model =
     case msg of
         Msg.Frame time ->
-            let
-                baseUpdate =
-                    updatePhysicsWrapper (model.timeAccumulator + (Time.inSeconds time)) model
-            in
-                if Vec2.getX model.playerPos > 10 then
-                    (baseUpdate |> moveGraphics -10 10)
-                        ! [ Random.generate Msg.AddGraphics (LevelGenerator.graphicsGenerator 10 20) ]
-                else
-                    baseUpdate ! []
+            if model.paused then 
+                model ! []
+            else
+                let
+                    baseUpdate =
+                        updatePhysicsWrapper (model.timeAccumulator + (Time.inSeconds time)) model
+                in
+                    if Vec2.getX model.playerPos > 10 then
+                        (baseUpdate |> moveGraphics -10 10)
+                            ! [ Random.generate Msg.AddGraphics (LevelGenerator.graphicsGenerator 10 20) ]
+                    else
+                        baseUpdate ! []
 
         Msg.AddGraphics graphics ->
             { model | graphics = model.graphics ++ graphics } ! []
@@ -29,21 +32,33 @@ update msg model =
         Msg.KeyPress code ->
             (case Char.fromCode code of
                 'q' ->
-                    { model | windSpeed = model.windSpeed + 0.5}
-                'w' ->
                     { model | windSpeed = model.windSpeed - 0.5}
+                'w' ->
+                    { model | windSpeed = model.windSpeed + 0.5}
                 'a' ->
-                    { model | kiteLiftCoefficient = model.kiteLiftCoefficient + 0.05}
-                's' ->
                     { model | kiteLiftCoefficient = model.kiteLiftCoefficient - 0.05}
+                's' ->
+                    { model | kiteLiftCoefficient = model.kiteLiftCoefficient + 0.05}
                 'd' ->
-                    { model | kiteDragCoefficient = model.kiteDragCoefficient + 0.05}
-                'f' ->
                     { model | kiteDragCoefficient = model.kiteDragCoefficient - 0.05}
+                'f' ->
+                    { model | kiteDragCoefficient = model.kiteDragCoefficient + 0.05}
                 'o' ->
-                    { model | debugArrowsScale = model.debugArrowsScale + 0.05}
-                'p' ->
                     { model | debugArrowsScale = model.debugArrowsScale - 0.05}
+                'p' ->
+                    { model | debugArrowsScale = model.debugArrowsScale + 0.05}
+                'k' ->
+                    { model | physicsTimeWarp = max (model.physicsTimeWarp - 0.05) 0.05}
+                'l' ->
+                    { model | physicsTimeWarp = model.physicsTimeWarp + 0.05}
+                'n' ->
+                    { model | physicsFrameSkip = max (model.physicsFrameSkip - 0.5) 0.5}
+                'm' ->
+                    { model | physicsFrameSkip = model.physicsFrameSkip + 0.5}
+                ' ' ->
+                    { model | paused = not model.paused}
+                'v' ->
+                    (updatePhysics (GameConstants.physicsUpdateTime * model.physicsTimeWarp) model)
                 _ -> model
             ) ! []       
 
@@ -68,10 +83,10 @@ updatePhysicsWrapper : Float -> Model -> Model
 updatePhysicsWrapper timeAccumulator model =
     if timeAccumulator > GameConstants.maxTimeAccumulator then
         updatePhysicsWrapper GameConstants.maxTimeAccumulator model
-    else if timeAccumulator > GameConstants.physicsUpdateTime * GameConstants.physicsFrameSkip then
+    else if timeAccumulator > GameConstants.physicsUpdateTime * model.physicsFrameSkip then
         updatePhysicsWrapper
-            (timeAccumulator - GameConstants.physicsUpdateTime * GameConstants.physicsFrameSkip)
-            (updatePhysics (GameConstants.physicsUpdateTime * GameConstants.physicsTimeWarp) model)
+            (timeAccumulator - GameConstants.physicsUpdateTime * model.physicsFrameSkip)
+            (updatePhysics (GameConstants.physicsUpdateTime * model.physicsTimeWarp) model)
     else
         { model | timeAccumulator = timeAccumulator }
 
@@ -97,11 +112,18 @@ updatePhysics timeStep model =
         --symplectic Euler - update velocity before updating position
         modelWithForces =
             { model
-                | playerVelocity = Vec2.add model.playerVelocity (Vec2.scale (timeStep / GameConstants.playerWeight) forcesPlayer)
-                , kiteVelocity = Vec2.add model.kiteVelocity (Vec2.scale (timeStep / GameConstants.kiteWeight) forcesKite)
+                | playerVelocity = Vec2.add model.playerVelocity (Vec2.scale (timeStep / GameConstants.playerMass) forcesPlayer)
+                , kiteVelocity = Vec2.add model.kiteVelocity (Vec2.scale (timeStep / GameConstants.kiteMass) forcesKite)
             }
 
         modelWithImpulse =
+            {-let 
+                (playerImpulse, kiteImpulse) = tetherImpulse modelWithForces
+            in
+                { modelWithForces 
+                    | playerVelocity = Vec2.add playerImpulse modelWithForces.playerVelocity
+                    , kiteVelocity = Vec2.add kiteImpulse modelWithForces.kiteVelocity
+                }-}
             modelWithForces
 
         kitePosWithImpulse =
@@ -116,6 +138,7 @@ updatePhysics timeStep model =
 
         ( correctPlayerPos, correctPlayerVelocity ) =
             ( playerPosWithImpulse, modelWithImpulse.playerVelocity )
+                |> correctForJumpState modelWithImpulse.jumpState
                 |> correctForWater |> correctForMaxVelocity
     in
         { modelWithImpulse
@@ -148,7 +171,7 @@ forcesOnKite model =
             (Vec2.getY model.kitePos)
 
         gravityForce =
-            Vec2.scale GameConstants.kiteWeight GameConstants.gravity
+            Vec2.scale GameConstants.kiteMass GameConstants.gravity
 
         airVelocity =
             Vec2.scale model.windSpeed GameConstants.windDirection
@@ -190,7 +213,7 @@ forcesOnPlayer : Model -> Float2
 forcesOnPlayer model =
     let
         gravityForce =
-            Vec2.scale GameConstants.playerWeight GameConstants.gravity
+            Vec2.scale GameConstants.playerMass GameConstants.gravity
 
         playerY = 
             Vec2.getY model.playerPos
@@ -233,8 +256,6 @@ coefficientOfDrag model =
 coefficientOfLift : Model -> Float
 coefficientOfLift model =
     model.kiteLiftCoefficient
-
-
 forceTransferKite : Model -> Float2 -> Float2 -> Float2
 forceTransferKite model forcesKite forcesPlayer =
     let
@@ -249,21 +270,27 @@ forceTransferKite model forcesKite forcesPlayer =
     in
         let
             distanceFactor =
-                if distanceToKite >= rampEnd then
-                    1
+                if distanceToKite >= rampStart then
+                    (distanceToKite - rampStart) * 100
+                else 
+                    0
+                --(2 ^ ((distanceToKite - rampEnd) * 10))
+                {-if distanceToKite >= rampEnd then
+                    (((distanceToKite - rampEnd) * 3) ^ 2) * 2 + 1
                 else if distanceToKite < rampStart then
                     0
                 else
                     ((distanceToKite - rampStart) / (rampEnd - rampStart))
-
-            magnitudeKite =
+                -}
+            {-magnitudeKite =
                 ((Vec2.dot forcesKite tether)) / (Vec2.lengthSquared tether)
 
             magnitudePlayer =
                 ((Vec2.dot forcesPlayer tether)) / (Vec2.lengthSquared tether)
-
+-}
             magnitudeTotal =
-                max 0 (magnitudeKite - magnitudePlayer)
+                --max 0 (magnitudeKite - magnitudePlayer)
+                30
         in
             Vec2.scale (-magnitudeTotal * distanceFactor)
              (Vec2.normalize tether)
@@ -278,7 +305,7 @@ correctKiteForTether model timeStep proposedPosition proposedVelocity =
         distanceToKite =
             Vec2.length tether
     in
-        if distanceToKite >= model.tetherLength then
+        {-if distanceToKite >= model.tetherLength then
             let
                 newPosition =
                     Vec2.scale model.tetherLength (Vec2.normalize tether)
@@ -290,7 +317,7 @@ correctKiteForTether model timeStep proposedPosition proposedVelocity =
                     (Vec2.sub newPosition proposedPosition)
                     |> Vec2.add proposedVelocity
                 )
-        else
+        else -}
             ( proposedPosition, proposedVelocity )
 
 
@@ -308,6 +335,13 @@ correctForMaxVelocity ( pos, velocity ) =
     else
         ( pos, velocity )
 
+correctForJumpState : JumpState -> ( Float2, Float2 ) -> ( Float2, Float2 )
+correctForJumpState jumpState ( pos, velocity ) =
+    case jumpState of
+        None ->
+            ( (Vec2.getX pos, GameConstants.waterLevelY), (Vec2.getX velocity, 0))
+        _ ->
+            ( pos, velocity )
 
 
 debugArrowForce : String -> String -> Float2 -> Float2 -> DebugArrow

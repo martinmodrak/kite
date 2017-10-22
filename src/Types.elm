@@ -1,4 +1,4 @@
-module Types exposing (Model, DebugArrow, Graphics)
+module Types exposing (Model, DebugArrow, Graphics, JumpState(..))
 
 import Vector2 as Vec2 exposing (Float2)
 
@@ -16,9 +16,15 @@ type alias Graphics = {
     color: String
 }
 
+type JumpState =
+    None
+    | Preparing
+    | Air
+
 type alias Model =
     { playerPos : Float2
     , playerVelocity : Float2
+    , jumpState : JumpState
     , kitePos : Float2
     , kiteVelocity : Float2
     , kiteLiftCoefficient : Float
@@ -31,4 +37,7 @@ type alias Model =
     , graphics: List Graphics
     , debugArrows : List DebugArrow
     , debugArrowsScale : Float
+    , physicsTimeWarp : Float
+    , physicsFrameSkip: Float
+    , paused : Bool
     }

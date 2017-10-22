@@ -42,7 +42,15 @@ view model =
             (
                 (text ("Wind: " ++ (toString model.windSpeed) 
                 ++ " Lift: " ++ (toString model.kiteLiftCoefficient)
-                ++ " Drag: " ++ (toString model.kiteDragCoefficient))) ::                
+                ++ " Drag: " ++ (toString model.kiteDragCoefficient)                
+                ++ " Time warp: " ++ (toString model.physicsTimeWarp)                
+                ++ " Frame skip: " ++ (toString model.physicsFrameSkip)                
+                ++ " Kite dist: " ++ (
+                    (Vec2.sub model.kitePos model.playerPos) |>
+                    Vec2.length |> (*) 100 |> round
+                    |> toString  
+                )
+                )) ::                
                 (List.map (viewGraphics viewMatrix) model.graphics)
                 ++ ((div
                         [ Attr.class "kite"

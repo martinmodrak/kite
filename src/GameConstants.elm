@@ -5,26 +5,23 @@ import Vector2 exposing (Float2)
 physicsUpdateTime: Float
 physicsUpdateTime = 0.02
 
-physicsTimeWarp : Float
-physicsTimeWarp = 1
-
-physicsFrameSkip : Float
-physicsFrameSkip = 1
-
 maxTimeAccumulator: Float
 maxTimeAccumulator = 1
 
-kiteWeight: Float
-kiteWeight = 0.1
+kiteMass: Float
+kiteMass = 1
 
-playerWeight: Float
-playerWeight = 5
+playerMass: Float
+playerMass = 7.5
+
+tetherRestitution: Float
+tetherRestitution = 0.65
 
 tetherForceTransferTolerance: Float
-tetherForceTransferTolerance = 0.2
+tetherForceTransferTolerance = 0.05
 
 tetherForceTransferRamp : Float
-tetherForceTransferRamp = 0.2
+tetherForceTransferRamp = 0.1
 
 velocityCorrectionDamping: Float
 velocityCorrectionDamping =

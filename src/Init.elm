@@ -9,10 +9,11 @@ init : ( Model, Cmd Msg.Msg )
 init =
     { playerPos = ( 0, 0 )
     , playerVelocity = ( 0, 0 )
+    , jumpState = None
     , kitePos = ( 2, 2 )
     , kiteVelocity = ( 0, 0 )
-    , kiteLiftCoefficient = 0.5
-    , kiteDragCoefficient = 1
+    , kiteLiftCoefficient = 1
+    , kiteDragCoefficient = 2
     , windSpeed = 9
     , windIndicatorX = 0
     , tetherLength = sqrt 8
@@ -21,6 +22,9 @@ init =
     , graphics = []
     , debugArrows = []
     , debugArrowsScale = 0.1
+    , physicsTimeWarp = 1
+    , physicsFrameSkip = 1
+    , paused = False
     }
         ! [Random.generate Msg.AddGraphics (LevelGenerator.graphicsGenerator -10 20)]
 

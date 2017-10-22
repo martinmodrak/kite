@@ -1,2 +1,4 @@
 - Stahnuti zvysi drag (menit lift neni potreba - pokud ano, tak zvysit)
 - Nizsi uhel zvysi drag i lift
+- Je nutna zavislost drag (a asi i lift) na uhlu!
+- Nebo mozna jen mimo skok zakazat zvednuti od hladiny
