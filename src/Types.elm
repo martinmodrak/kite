@@ -18,8 +18,9 @@ type alias Graphics = {
 
 type JumpState =
     None
-    | Preparing
-    | Air
+    | Preparing Float
+    | Rising
+    | Descending
 
 type alias Model =
     { playerPos : Float2

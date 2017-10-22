@@ -12,7 +12,7 @@ kiteMass: Float
 kiteMass = 1
 
 playerMass: Float
-playerMass = 7.5
+playerMass = 10
 
 tetherRestitution: Float
 tetherRestitution = 0.65
@@ -62,3 +62,6 @@ windFluctuation = 2
 
 waterFrictionTolerance : Float
 waterFrictionTolerance = 0.1
+
+maxJumpPreparingTime : Float
+maxJumpPreparingTime = 0.5

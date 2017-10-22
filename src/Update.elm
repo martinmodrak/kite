@@ -59,6 +59,8 @@ update msg model =
                     { model | paused = not model.paused}
                 'v' ->
                     (updatePhysics (GameConstants.physicsUpdateTime * model.physicsTimeWarp) model)
+                'x' ->
+                    jumpPressed model
                 _ -> model
             ) ! []       
 
@@ -146,6 +148,7 @@ updatePhysics timeStep model =
             , kiteVelocity = correctKiteVelocity
             , playerPos = correctPlayerPos
             , playerVelocity = correctPlayerVelocity
+            , jumpState = updateJumpState modelWithImpulse timeStep
             , totalTime = model.totalTime + timeStep
             , windIndicatorX =
                 if (model.windIndicatorX > 10) then
@@ -198,6 +201,7 @@ forcesOnKite model =
             Vec2.scale
                 (0.5 * kiteAirSpeed ^ 2 * (coefficientOfLift model))
                 --TODO: cross sectional area (but maybe included in coefficient of drag)
+                --TODO use both components of air velocity, use them to compute lift coeff
                 ( 0, normalizedAirVelocityX )
     in
         ( gravityForce
@@ -250,12 +254,24 @@ coefficientOfFriction model =
 
 coefficientOfDrag : Model -> Float
 coefficientOfDrag model =
-    model.kiteDragCoefficient
+    case model.jumpState of
+        None ->
+            model.kiteDragCoefficient
+        Preparing time ->
+            model.kiteDragCoefficient * 0.5
+        _ ->
+             model.kiteDragCoefficient 
 
 
 coefficientOfLift : Model -> Float
 coefficientOfLift model =
-    model.kiteLiftCoefficient
+    case model.jumpState of
+        None ->
+            model.kiteLiftCoefficient
+        _ ->
+            model.kiteLiftCoefficient * 2.5
+
+
 forceTransferKite : Model -> Float2 -> Float2 -> Float2
 forceTransferKite model forcesKite forcesPlayer =
     let
@@ -337,12 +353,44 @@ correctForMaxVelocity ( pos, velocity ) =
 
 correctForJumpState : JumpState -> ( Float2, Float2 ) -> ( Float2, Float2 )
 correctForJumpState jumpState ( pos, velocity ) =
-    case jumpState of
-        None ->
-            ( (Vec2.getX pos, GameConstants.waterLevelY), (Vec2.getX velocity, 0))
+    case jumpState of 
+        Rising -> ( pos, velocity )
+        Descending -> ( pos, velocity )
         _ ->
-            ( pos, velocity )
+            ( (Vec2.getX pos, GameConstants.waterLevelY), (Vec2.getX velocity, 0))
 
+jumpPressed: Model -> Model 
+jumpPressed model = 
+    let
+        newJumpState = 
+            case model.jumpState of
+                None -> Preparing GameConstants.maxJumpPreparingTime
+                _ -> model.jumpState
+    in
+        { model | jumpState = newJumpState }
+
+updateJumpState: Model -> Float -> JumpState
+updateJumpState model timeStep =
+    case model.jumpState of
+        None -> None
+        Preparing time -> 
+            if 
+                time < 0 ||
+                 ((Vec2.getX model.playerPos) > (Vec2.getX model.kitePos) - 1 )             
+            then
+                Rising
+            else
+                Preparing (time - timeStep)
+        Rising ->
+            if Vec2.getY model.playerVelocity < 0 then
+                Descending
+            else
+                Rising
+        Descending ->
+            if Vec2.getY model.playerPos < GameConstants.waterLevelY + 0.01 then
+                None
+            else
+                Descending
 
 debugArrowForce : String -> String -> Float2 -> Float2 -> DebugArrow
 debugArrowForce name color start vector =

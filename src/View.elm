@@ -45,6 +45,7 @@ view model =
                 ++ " Drag: " ++ (toString model.kiteDragCoefficient)                
                 ++ " Time warp: " ++ (toString model.physicsTimeWarp)                
                 ++ " Frame skip: " ++ (toString model.physicsFrameSkip)                
+                ++ " Jump state: " ++ (toString model.jumpState)
                 ++ " Kite dist: " ++ (
                     (Vec2.sub model.kitePos model.playerPos) |>
                     Vec2.length |> (*) 100 |> round
