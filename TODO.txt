@@ -1,4 +1,11 @@
+- Je nutna zavislost drag (a asi i lift) na uhlu!
+  - Asi oddelit koeficient pro silu po delsi a kratsi strane kitu
+  - MOhlo by projit bez zavadeni 3D modelovani kitu
+- Nebo mozna jen mimo skok zakazat zvednuti od hladiny
+- Orientace draka 1 - normal vs. priprava na jump
+
+
 - Stahnuti zvysi drag (menit lift neni potreba - pokud ano, tak zvysit)
 - Nizsi uhel zvysi drag i lift
-- Je nutna zavislost drag (a asi i lift) na uhlu!
-- Nebo mozna jen mimo skok zakazat zvednuti od hladiny
+- Rizeni v letu
+- Vyresit dopady (chci dopadnout spis v rychlosti)
